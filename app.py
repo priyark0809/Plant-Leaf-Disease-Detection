@@ -25,10 +25,6 @@ model = load_model()
 # Class labels (Modify based on dataset)
 CLASS_NAMES = ['Potato_Early_blight', 'Potato_Healthy', 'PotatoLate_blight']
 
-# Sidebar Navigation
-st.sidebar.title("🌿 Plant Disease Detection System")
-app_mode = st.sidebar.selectbox("Select Page", ["🏠 HOME", "🔬 DISEASE RECOGNITION"])
-
 # Image Preprocessing and Prediction
 def model_prediction(image, model):
     """Process image and predict disease using the loaded model."""
@@ -36,13 +32,12 @@ def model_prediction(image, model):
         # Convert PIL image to numpy array
         img_array = np.array(image)
 
-        # Resize image to match model input size (128x128)
-        img_resized = cv2.resize(img_array, (128, 128))
-
-        
+        # Resize image to match model input size (128x128), normalize pixel values
+        img_resized = tf.image.resize(img_array, [128, 128])
+        img_normalized = img_resized / 255.0  # Normalize pixel values
 
         # Expand dimensions to create a batch of size 1
-        img_expanded = np.expand_dims(img_resized, axis=0)
+        img_expanded = np.expand_dims(img_normalized, axis=0)
 
         # Make a prediction
         predictions = model.predict(img_expanded)
@@ -54,6 +49,9 @@ def model_prediction(image, model):
         st.error(f"⚠ Error during prediction: {e}")
         return None, None
 
+# Sidebar Navigation
+st.sidebar.title("🌿 Plant Disease Detection System")
+app_mode = st.sidebar.selectbox("Select Page", ["🏠 HOME", "🔬 DISEASE RECOGNITION"])
 # Main Page
 if app_mode == "🏠 HOME":
     st.markdown("<h1 style='text-align: center;'>🌱 Plant Disease Detection System for Sustainable Agriculture</h1>", 
