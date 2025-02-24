@@ -1,80 +1,93 @@
 import streamlit as st
 import tensorflow as tf
 import numpy as np
+import cv2
 from PIL import Image
 
 file_id:"1Kcf1zRi5-ooLYtKXV2FY3En0lrf1U0K4"
 url:'https://drive.google.com/file/d/1Kcf1zRi5-ooLYtKXV2FY3En0lrf1U0K4/view?usp=drive_link'
-# Load the trained model
+# Load the trained model once and cache it
 MODEL_PATH = "trained_plant_disease_model.keras"
-model = tf.keras.models.load_model(MODEL_PATH)
+model = tf.keras.models.load_model('trained_plant_disease_model.keras')
+@st.cache_resource()
+def load_model():
+    try:
+        model = tf.keras.models.load_model("trained_plant_disease_model.keras")  # Ensure correct path
+        st.success("✅ Model loaded successfully!")
+        return model
+    except Exception as e:
+        st.error(f"⚠ Error loading model: {e}")
+        return None
 
-# Define class names (update according to your dataset)
-class_names = ["Healthy", "Early Blight", "Late Blight"]
+# Load the model
+model = load_model()
 
-def preprocess_image(image):
-    """Preprocess the uploaded image for model prediction."""
-    image = image.convert("RGB")  # Ensure the image is in RGB format
-    image = image.resize((128, 128))  # Resize to match model input size
-    image = np.array(image) / 255.0  # Normalize pixel values
-    image = np.expand_dims(image, axis=0)  # Expand dims to match batch size
-    return image
+# Class labels (Modify based on dataset)
+CLASS_NAMES = ['Potato_Early_blight', 'Potato_Healthy', 'PotatoLate_blight']
 
-# Streamlit UI with Modern Design
-st.set_page_config(page_title="Potato Leaf Disease Detector", layout="wide")
+# Sidebar Navigation
+st.sidebar.title("🌿 Plant Disease Detection System")
+app_mode = st.sidebar.selectbox("Select Page", ["🏠 HOME", "🔬 DISEASE RECOGNITION"])
 
-# Custom CSS for styling
-st.markdown("""
-    <style>
-        .main {
-            background-color: #f5f5f5;
-        }
-        h1 {
-            color: #2E8B57;
-            text-align: center;
-        }
-        .stButton>button {
-            background-color: #2E8B57;
-            color: white;
-            font-size: 18px;
-            padding: 10px 20px;
-        }
-        .stFileUploader {
-            text-align: center;
-        }
-    </style>
-""", unsafe_allow_html=True)
+# Image Preprocessing and Prediction
+def model_prediction(image, model):
+    """Process image and predict disease using the loaded model."""
+    try:
+        # Convert PIL image to numpy array
+        img_array = np.array(image)
 
-st.title("🍃 Potato Leaf Disease Detection 🍃")
-st.markdown("Upload an image of a potato leaf to detect if it's healthy or diseased.")
+        # Resize image to match model input size (128x128)
+        img_resized = cv2.resize(img_array, (128, 128))
 
-# Upload section
-uploaded_file = st.file_uploader("📤 Upload an Image", type=["jpg", "png", "jpeg"], label_visibility="visible")
+        
 
-if uploaded_file is not None:
-    col1, col2 = st.columns(2)
-    image = Image.open(uploaded_file)
+        # Expand dimensions to create a batch of size 1
+        img_expanded = np.expand_dims(img_resized, axis=0)
+
+        # Make a prediction
+        predictions = model.predict(img_expanded)
+        predicted_index = np.argmax(predictions)
+        confidence = np.max(predictions) * 100
+
+        return predicted_index, confidence
+    except Exception as e:
+        st.error(f"⚠ Error during prediction: {e}")
+        return None, None
+
+# Main Page
+if app_mode == "🏠 HOME":
+    st.markdown("<h1 style='text-align: center;'>🌱 Plant Disease Detection System for Sustainable Agriculture</h1>", 
+                unsafe_allow_html=True)
+    st.write("This system helps farmers and agricultural researchers detect plant diseases efficiently.")
+
+# Disease Recognition Page
+elif app_mode == "🔬 DISEASE RECOGNITION":
+    st.header("🔍 Plant Disease Detection System")
     
-    with col1:
+    test_image = st.file_uploader("📤 Choose an Image:", type=["jpg", "png", "jpeg"])
+
+    if test_image is not None:
+        image = Image.open(test_image).convert("RGB")  # Convert to RGB format
         st.image(image, caption="📷 Uploaded Image", use_container_width=True)
-    
-    with col2:
-        st.write("🔄 Processing image...")
-        processed_image = preprocess_image(image)
-        
-        # Make prediction
-        prediction = model.predict(processed_image)
-        predicted_class = class_names[np.argmax(prediction)]
-        confidence = np.max(prediction)
-        
-        # Display Results
-        st.success(f"✅ Prediction: {predicted_class}")
-        st.write(f"🎯 Confidence: {confidence:.2f}")
-        
-        # Show class probabilities
-        st.write("📊 Class Probabilities:")
-        for i, class_name in enumerate(class_names):
-            st.progress(float(prediction[0][i]))
-            st.write(f"{class_name}: {prediction[0][i]:.2%}")
 
-st.markdown("---")
+        if st.button("🔍 Predict"):
+            if model is None:
+                st.error("⚠ Model could not be loaded. Please check the file path.")
+            else:
+                st.snow()  # Show animation effect
+                st.write("⏳ Analyzing the image...")
+
+                # Prediction
+                result_index, confidence = model_prediction(image, model)
+
+                if result_index is not None:
+                    # Display Result
+                    st.success(f"🩺 *Prediction:*  { CLASS_NAMES[result_index] } ({ confidence:.2f}% Confidence)")
+
+                    # Show confidence as progress bar
+                    st.progress(int(confidence))
+                else:
+                    st.error("❌ Prediction failed.")
+
+if __name__ == "__main__":
+    st.write("✅ Ready for Predictions")
