@@ -5,10 +5,10 @@ import cv2
 from PIL import Image
 
 file_id:"1Kcf1zRi5-ooLYtKXV2FY3En0lrf1U0K4"
-url:'https://drive.google.com/file/d/1Kcf1zRi5-ooLYtKXV2FY3En0lrf1U0K4/view?usp=drive_link'
+url:'https://drive.google.com/file/d/1Kcf1zRi5-ooLYtKXV2FY3En0lrf1U0K4/view?usp=sharing'
 # Load the trained model once and cache it
 MODEL_PATH = "trained_plant_disease_model.keras"
-model = tf.keras.models.load_model('trained_plant_disease_model.keras')
+model = tf.keras.models.load_model(MODEL_PATH)
 @st.cache_resource()
 def load_model():
     try:
